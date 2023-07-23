@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forecaster</title>
+    <meta name="title" content="Forecaster">
+    <meta name="description" content="Weather app by Sayan">
+    <link rel="shortcut icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/style.css">
+   
+</head>
+<body>
+    
+    <header class="header">
+        <div class="container">
+            <a href="#" class="logo">
+                <img src="./assets/images/logo.png" width="364px" height="58px" alt="logo">
+            </a>
+            <div class="search-view" data-search-view>
+                <div class="search-wrapper">
+                    <input type="search" name="search" placeholder="Search City..." autocomplete="off" class="search-field" data-search-field>
+                    <span class="m-icon leading-icon">search</span>
+                    <button class="icon-btn leading-icon has-state" aria-label="close search data-search-toggler"><span class="m-icon">arrow_back</span></button>
+                </div>
+
+                <div class="search-result" data-search-result>
+                    <ul class="view-list" data-search-list>
+                        <li class="view-item">
+                            <a href="#" class="item-link has-state" data-search-toggler></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn has-state" aria-label="open search" data-search-toggler>
+                    <span class="m-icon icon">search</span>
+                </button>
+                <a href="#/current-location" class="btn-primary has-state" data-current-location-btn>
+                    <span class="m-icon">my_location</span>
+                    <span class="span">Current Location</span>
+                </a>
+            </div>
+        </div>
+    </header>
+    <main>
+        <article class="container" data-container>
+            <div class="content-left">
+                <section class="section current-weather" aria-label="current weather" data-current-weather>
+                    <div class="card card-lg current-weather-card">
+                       
+                    </div>
+                </section>
+                <section class="section forecast" aria-labelledby="forecast-label" data-5-day-forecast>
+                    
+                </section>
+            </div>
+            <div class="content-right">
+                <section class="section highlights" aria-labelledby="highlights-label" data-highlights>
+                    
+                </section>
+                <section class="section hourly-forecast" aria-label="hourly forecast" data-hourly-forecast>
+                </section>
+                <footer class="footer">
+                    <p class="body-3">Copyright 2023 @Coding Bull. All Rights Reserved</p>
+                    <p class="body-3">
+                        Powered By <a href="https://openweathermap.org/api" title="Free OpenWeather Api" target="_blank" rel="noopener">
+                            <img src="./assets/images/openweather.png" alt="OpenWeather" width="150" height="30" loading="lazy">
+                        </a>
+                    </p>
+                </footer>
+            </div>
+            <div class="loading" data-loading></div>
+        </article>
+    </main>
+    <section class="error-content" data-error-content>
+        <h2 class="heading">404</h2>
+        <p class="body-1">Page not found!</p>
+        <a href="#/weather?lat=22.5727&lon=88.3639" class="btn-primary">
+            <span class="span">Go here</span>
+        </a>
+    </section>
+</body>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="./app.js" type="module" ></script>
+    <script src="./route.js" type="module" ></script>
+<script>
+
+    //API.JS
+   
+const api_key="6da5d90c627dfc6066d5425f9ed4cd57";
+const fetchData=function(URL,callback){
+    fetch(`${URL}&appid=${api_key}`).then(res=>res.json()).then(data=>callback(data));
+}
+const url={
+    currentWeather(lat,lon){
+        return `https://api.openweathermap.org/data/2.5/weather?${lat}&${lon}&units=metric`
+    },
+    forecast(lat,lon){
+        return `https://api.openweathermap.org/data/2.5/forecast?${lat}&${lon}&units=metric`
+    },
+    airPollution(lat,lon){
+        return `https://api.openweathermap.org/data/2.5/air_pollution?${lat}&${lon}`
+    },
+    reverseGeo(lat,lon){
+        return `https://api.openweathermap.org/geo/1.0/reverse?${lat}&${lon}&limit=5`
+    },
+    geo(query){
+        return `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5`
+    }
+}
+
+//MODULE.JS
+ const weekDayNames=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+ const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+ const getDate=function(dateUnix,timezone){
+    const date=new Date((dateUnix+timezone)*1000);
+    const weekDayName=weekDayNames[date.getUTCDay()];
+    const monthName=monthNames[date.getUTCMonth()];
+    return `${weekDayName} ${date.getUTCDate()}, ${monthName}`;
+}
+ const getTime=function(timeUnix,timezone){
+    const date=new Date((timeUnix+timezone)*1000);
+    const hours=date.getUTCHours();
+    const minutes=date.getUTCMinutes();
+    const period=hours>=12?"PM":"AM";
+    return `${hours%12||12}:${minutes} ${period}`;
+}
+ const getHours=function(timeUnix,timezone){
+    const date=new Date((timeUnix+timezone)*1000);
+    const hours=date.getUTCHours();
+    const period=hours>=12?"PM":"AM";
+    return `${hours%12||12} ${period}`;
+}
+ const mps_to_kmh=mps=>{
+    const mph=mps*3600;
+    return mph/1000;
+}
+ const aqiText={
+    1:{
+        level:"Good",
+        message:"Air quality is considered satisfactory, and air pollution poses little or no risk"
+    },
+    2:{
+        level:"Fair",
+        message:"Air quality is acceptable; however, for some pollutants there may be a moderate health concern for a very small number of people who are unusually sensitive to air pollution."
+    },
+    3:{
+        level:"Moderate",
+        message:"Members of sensitive group may experience health effects. The general public is not likely to be affected."
+    },
+    4:{
+        level:"Poor",
+        message:"Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects."
+    },
+    5:{
+        level:"Very Poor",
+        message:"Health warnings of emergency conditions. The entire population is more likely to be affected."
+    },
+}
+
+//ROUTE.JS
+const defaultLocation="#/weather?lat=22.5727&lon=88.3639"
+const currentLocation=function(){
+window.navigator.geolocation.getCurrentPosition(res=>{
+    const {latitude,longitude}=res.coords;
+    updateWeather(`lat=${latitude}`,`lon=${longitude}`);
+},err=>{
+window.location.hash=defaultLocation;
+});
+}
+const searchedLocation=query=>updateWeather(...query.split("&"));
+const routes=new Map([
+    ["/current-location",currentLocation],
+    ["/weather",searchedLocation]
+]);
+const checkHash=function(){
+const requestURL=window.location.hash.slice(1);
+const [route,query]=requestURL.includes?requestURL.split("?"):[requestURL];
+routes.get(route)?routes.get(route)(query):error404();
+}
+window.addEventListener("hashchange",checkHash);
+window.addEventListener("load",function(){
+if(!window.location.hash){window.location.hash="#/current-location";}
+else{checkHash();}
+});
+
+
+
+//APP.JS
+const addEventOnElement=function(elements,eventType,callback){
+    for(const element of elements) element.addEventListener(eventType,callback);
+}
+const searchView=document.querySelector("[data-search-view]");
+const searchTogglers=document.getElementsByClassName("has-state");
+const toggleSearch=()=>searchView.classList.toggle("active");
+searchTogglers[2].addEventListener("click",toggleSearch);
+searchTogglers[0].addEventListener("click",toggleSearch);
+
+const searchField=document.querySelector("[data-search-field]");
+const searchResult=document.querySelector("[data-search-result]");
+let searchTimeOut=null;
+const searchTimeOutDuration=500;
+searchField.addEventListener("input",function(){
+searchTimeOut??clearTimeout(searchTimeOut);
+if(!searchField.value){
+    searchResult.classList.remove("active");
+    searchResult.innerHTML="";
+    searchField.classList.remove("searching");
+}else{
+    searchField.classList.add("searching");
+}
+if(searchField.value){
+    searchTimeOut=setTimeout(()=>{
+        fetchData(url.geo(searchField.value),function(locations){
+            searchField.classList.remove("searching");
+            searchResult.classList.add("active");
+            searchResult.innerHTML=`<ul class="view-list" data-search-list>
+            <li class="view-item">
+                <span class="m-icon">location_on</span>
+                <div>
+                    <p class="item-title">Kolkata</p>
+                    <p class="label-2 item-subtitle">City of Kolkata,IN</p>
+                </div>
+                <a href="#" class="item-link has-state" data-search-toggler></a>
+            </li>
+        </ul>`;
+        const items=[];
+        for(const {name,lat,lon,country,state} of locations){
+            const searchItem=document.createElement("li");
+            searchItem.classList.add("view-item");
+            searchItem.innerHTML=`<span class="m-icon">location_on</span>
+            <div>
+                <p class="item-title">${name}</p>
+                <p class="label-2 item-subtitle">${state || ""} ${country}</p>
+            </div>
+            <a href="#/weather?lat=${lat}&lon=${lon}" class="item-link has-state" aria-label="${name} weather" data-search-toggler></a>`;
+            searchResult.querySelector("[data-search-list]").appendChild(searchItem);
+            items.push(searchItem.querySelector("[data-search-toggler]"));
+        }
+        addEventOnElement(items,"click",function(){
+            toggleSearch();
+            searchResult.classList.remove("active");
+        })
+    });
+    },searchTimeOutDuration);
+}
+});
+ 
+const container=document.querySelector("[data-container]");
+const loading=document.querySelector("[data-loading]");
+const currentLocationBtn=document.querySelector("[data-current-location-btn]");
+const errorContent=document.querySelector("[data-error-content]");
+
+const updateWeather=function(lat,lon){
+    loading.style.display="grid";
+    container.style.overflow="hidden";
+   container.classList.remove("fade-in");
+    errorContent.style.display="none";
+
+    const currentWeatherSection=document.querySelector("[data-current-weather]");
+    const highlightSection=document.querySelector("[data-highlights]");
+    const hourlySection=document.querySelector("[data-hourly-forecast]");
+    const forecastSection=document.querySelector("[data-5-day-forecast]");
+
+    currentWeatherSection.innerHTML="";
+    highlightSection.innerHTML="";
+    hourlySection.innerHTML="";
+    forecastSection.innerHTML="";
+
+    if(window.location.hash==="#/current-location"){
+        currentLocationBtn.setAttribute("disabled","");
+    }else{
+        currentLocationBtn.removeAttribute("disabled");
+    }
+
+    fetchData(url.currentWeather(lat,lon),function(currentWeather){
+        const{
+            weather,
+            dt:dateUnix,
+            sys:{sunrise:sunriseUnixUTC,sunset:sunsetUnixUTC},
+            main:{temp,feels_like,pressure,humidity},
+            visibility,
+            timezone
+        }=currentWeather;
+        const [{description,icon}]=weather;
+        const card=document.createElement("div");
+        card.classList.add("card","card-lg","current-weather-card");
+        card.innerHTML=` <h2 class="title-2 card-title">Now</h2>
+        <div class="weapper">
+            <p class="heading">${parseInt(temp)}&deg;C</p>
+            <img src="./assets/images/weather_icons/${icon}.png" width="64" height="64" alt="${description}" class="weather-icon">
+        </div>
+        <p class="body-3">${description}</p>
+        <ul class="meta-list">
+            <li class="meta-item">
+                <span class="m-icon">Calendar_today</span>
+                <p class="title-3 meta-text">${getDate(dateUnix,timezone)}</p>
+            </li>
+            <li class="meta-item">
+                <span class="m-icon">location_on</span>
+                <p class="title-3 meta-text" data-location></p>
+            </li>
+        </ul>`;
+        fetchData(url.reverseGeo(lat,lon),function([{name,country}]){
+            card.querySelector("[data-location]").innerHTML=`${name}, ${country}`
+        });
+        currentWeatherSection.appendChild(card);
+
+          //Today's highlights
+
+          fetchData(url.airPollution(lat,lon),function(airPollution){
+            const [{
+                main:{aqi},
+                components:{no2,o3,so2,pm2_5}
+            }]=airPollution.list;
+            const card=document.createElement("div");
+            card.classList.add("card","card-lg");
+            card.innerHTML=`
+            <h2 class="title-2" id="highlights-label">Todays Highlights</h2>
+            <div class="highlight-list">
+                <div class="card card-sn highlight-card one">
+                    <h3 class="title-3">Air Quality Index</h3>
+                    <div class="wrapper">
+                        <span class="m-icon">air</span>
+                        <ul class="card-list">
+                            <li class="card-item">
+                                <p class="title-1">${pm2_5.toPrecision(2)}</p>
+                                <p class="label-1">PM2.5</p>
+                            </li>
+                            <li class="card-item">
+                                <p class="title-1">${so2.toPrecision(2)}</p>
+                                <p class="label-1">SO<sup>2</sup></p>
+                            </li>
+                            <li class="card-item">
+                                <p class="title-1">${no2.toPrecision(2)}</p>
+                                <p class="label-1">NO<sup>2</sup></p>
+                            </li>
+                            <li class="card-item">
+                                <p class="title-1">${o3.toPrecision(2)}</p>
+                                <p class="label-1">O<sub>3</sub></p>
+                            </li>
+                        </ul>
+                    </div>
+                    <span class="badge aqi-${aqi} label-${aqi}" title="${aqiText[aqi].message}">${aqiText[aqi].level}</span>
+                </div>
+                <div class="card card-sn highlight-card two">
+                    <h3 class="title-3">Sunrise & Sunset</h3>
+                    <div class="card-list">
+                        <div class="card-item">
+                            <span class="m-icon">clear_day</span>
+                            <div><p class="label-1">Sunrise</p>
+                            <p class="title-1">${getTime(sunriseUnixUTC,timezone)}</p></div>
+                        </div>
+                        <div class="card-item">
+                            <span class="m-icon">clear_night</span>
+                            <div><p class="label-1">Sunset</p>
+                            <p class="title-1">${getTime(sunsetUnixUTC,timezone)}</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-sn highlight-card">
+                    <h3 class="title-3">Humidity</h3>
+                    <div class="wrapper">
+                        <span class="m-icon">humidity_percentage</span>
+                        <p class="title-1">${humidity}<sub>%</sub></p>
+                    </div>
+                </div>
+                <div class="card card-sn highlight-card">
+                    <h3 class="title-3">Pressure</h3>
+                    <div class="wrapper">
+                        <span class="m-icon">airwave</span>
+                        <p class="title-1">${pressure}<sub>hPa</sub></p>
+                    </div>
+                </div>
+                <div class="card card-sn highlight-card">
+                    <h3 class="title-3">Visibility</h3>
+                    <div class="wrapper">
+                        <span class="m-icon">visibility</span>
+                        <p class="title-1">${visibility/1000}<sub>Km</sub></p>
+                    </div>
+                </div>
+                <div class="card card-sn highlight-card">
+                    <h3 class="title-3">Feels Like</h3>
+                    <div class="wrapper">
+                        <span class="m-icon">thermostat</span>
+                        <p class="title-1">${parseInt(feels_like)}&deg;C</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        highlightSection.appendChild(card);
+        });
+
+         //24 hours forecast
+
+         fetchData(url.forecast(lat,lon),function(forecast){
+            const {
+                list:forecastList,
+                city:{timezone}
+            }=forecast;
+            hourlySection.innerHTML=`
+            <h2 class="title-2">Today at</h2>
+                    <div class="slider-container">
+                        <ul class="slider-list" data-temp>
+                           
+                        </ul>
+                        <ul class="slider-list" data-wind>
+                           
+                        </ul>
+                    </div>`;
+                    for(const [index,data] of forecastList.entries()){
+                        if(index>7) break;
+                        const {
+                            dt:dateTimeUnix,
+                            main:{temp},
+                            weather,
+                            wind:{deg:windDirection,speed:windSpeed}
+                        }=data;
+                        const [{icon,description}]=weather;
+                        const tempLi=document.createElement("li");
+                        tempLi.classList.add("slider-item");
+                        tempLi.innerHTML=`<div class="card card-sn slider-card">
+                        <p class="body-3">${getHours(dateTimeUnix,timezone)}</p>
+                        <img src="./assets/images/weather_icons/${icon}.png" width="48" height="48" loading="lazy" alt="${description}" class="weather-icon" title="${description}">
+                        <p class="body-3">${parseInt(temp)}&deg;</p>
+                    </div>`;
+                    hourlySection.querySelector("[data-temp]").appendChild(tempLi);
+                    const windLi=document.createElement("li");
+                    windLi.classList.add("slider-item");
+                    windLi.innerHTML=`<div class="card card-sn slider-card">
+                    <p class="body-3">${getHours(dateTimeUnix,timezone)}</p>
+                    <img src="./assets/images/weather_icons/direction.png" width="48" height="48" loading="lazy" alt="direction" class="weather-icon" style="transform:rotate(${windDirection-180}deg)">
+                    <p class="body-3">${parseInt(mps_to_kmh(windSpeed))} km/h</p>
+                </div>`;
+                hourlySection.querySelector("[data-wind]").appendChild(windLi);
+                    }
+                    forecastSection.innerHTML=`<h2 class="title-2" id="forecast-label">5 Days Forecast</h2>
+                    <div class="card card-lg forecast-card">
+                        <ul data-forecast-list>
+                        </ul>
+                    </div>`;
+                    for(let i=7,len=forecastList.length;i<len;i+=8){
+                        const {
+                            main:{temp_max},
+                            weather,
+                            dt_txt
+                        }=forecastList[i];
+                        const [{icon,description}]=weather;
+                        const date=new Date(dt_txt);
+                        const li=document.createElement("li");
+                        li.classList.add("card-item");
+                        li.innerHTML=` <div class="icon-wrapper">
+                        <img src="./assets/images/weather_icons/${icon}.png" width="36" height="36" alt="${description}" class="weather-icon" title="${description}">
+                        <span class="span">
+                            <p class="title-2">${parseInt(temp_max)}&deg;</p>
+                        </span>
+                    </div>
+                    <p class="label-1">${date.getDate()} ${monthNames[date.getUTCMonth()]}</p>
+                    <p class="label-1">${weekDayNames[date.getUTCDay()]}</p>`;
+                    forecastSection.querySelector("[data-forecast-list]").appendChild(li);
+                    }
+                    loading.style.display="none";
+    container.style.overflow="overlay";
+   container.classList.add("fade-in");
+        });
+    });
+}
+const error404=()=> errorContent.style.display="flex";
+</script>
+</html>

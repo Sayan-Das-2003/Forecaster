@@ -731,7 +731,7 @@ article.container{
     .highlight-list{grid-template-columns:repeat(4,1fr) ;}
 }
 @media(width<=370px){
-    .search-view, .header .btn-primary .span {
+    .header .btn-primary .span {
       display: none;
   }
   }
